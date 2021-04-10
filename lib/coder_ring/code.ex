@@ -7,20 +7,22 @@ defmodule CoderRing.Code do
   alias Ecto.Changeset
   alias __MODULE__
 
-  @primary_key {:position, :integer, []}
   schema "codes" do
     field :name, :string
+    field :position, :integer
     field :value, :string
   end
 
   @typedoc """
-  * `:position` - Primary key and auto-incrementing integer.
+  * `:id` - Unique integer ID for the code.
   * `:name` - Name of the code type.
+  * `:position` - Primary key and auto-incrementing integer.
   * `:value` - A pre-generated code.
   """
   @type t :: %Code{
-          position: non_neg_integer,
+          id: non_neg_integer,
           name: String.t(),
+          position: non_neg_integer,
           value: String.t()
         }
 

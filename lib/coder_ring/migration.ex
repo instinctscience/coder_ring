@@ -16,8 +16,8 @@ defmodule CoderRing.Migration do
       add(:last_max_pos, :integer)
     end
 
-    create table(:codes, primary_key: false) do
-      add(:position, :bigserial, primary_key: true)
+    create table(:codes) do
+      add(:position, :integer, null: false)
       add(:name, references(:code_memos, type: :string, column: :name), null: false)
       add(:value, :string, null: false)
     end

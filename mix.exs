@@ -66,7 +66,9 @@ defmodule CoderRing.MixProject do
         "compile --warnings-as-errors",
         "format --check-formatted",
         "credo"
-      ]
+      ],
+      "ecto.setup": ["ecto.create", "ecto.migrate"],
+      "ecto.reset": ["ecto.drop", "ecto.setup"]
     ]
   end
 end

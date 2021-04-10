@@ -67,7 +67,7 @@ defmodule CoderRing do
     name = opts[:name] || raise ":name option is required."
     is_atom(name) || raise ":name must be an atom."
     base_length = opts[:base_length] || @default_base_length
-    base_length in [1, 4] || raise "Only :base_length 1 and 4 are supported."
+    base_length in 1..4 || raise "Only :base_length 1 and 4 are supported."
     repo = opts[:repo] || Application.get_env(:coder_ring, :repo)
 
     %CoderRing{base_length: base_length, memo: nil, name: name, repo: repo}
@@ -200,10 +200,11 @@ defmodule CoderRing do
         values =
           ring
           |> all_codes()
-          |> Enum.map(&"('#{name}', '#{&1}')")
+          |> Enum.with_index(1)
+          |> Enum.map(fn {val, idx} -> "('#{name}', #{idx}, '#{val}')" end)
           |> Enum.join(",")
 
-        repo.query!("INSERT INTO codes (name, value) VALUES #{values}")
+        repo.query!("INSERT INTO codes (name, position, value) VALUES #{values}")
 
         Logger.warn("Coder ring (#{name}) is ready.")
 
