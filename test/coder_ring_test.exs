@@ -1,23 +1,34 @@
 defmodule CoderRingTest do
   use CoderRing.TestCase
-  alias CoderRing.{MyCoderRingProc, MyStatelessCoderRing}
+  import Ecto.Query
+  alias CoderRing.{Code, MyCoderRingProc, MySimpleCoderRing, Test.Repo}
 
-  @ring :widget
+  @ring :doodad
 
   test "basic + reset + ring wrap" do
-    assert :ok = MyStatelessCoderRing.reset(@ring)
+    assert :ok = MySimpleCoderRing.reset(@ring)
 
-    round1 = Enum.map(1..32, fn _ -> MyStatelessCoderRing.get_code(@ring) end)
+    round1 = Enum.map(1..32, fn _ -> MySimpleCoderRing.get_code(@ring) end)
 
     assert length(round1) == length(Enum.uniq(round1))
 
     round2 =
       Enum.map(1..32, fn _ ->
-        "X" <> base = MyStatelessCoderRing.get_code(@ring)
+        "X" <> base = MySimpleCoderRing.get_code(@ring)
         base
       end)
 
     assert Enum.sort(round1) == Enum.sort(round2)
+  end
+
+  test "bump: true" do
+    c1 = MySimpleCoderRing.get_code(@ring)
+    c2 = MySimpleCoderRing.get_code(@ring)
+    c3 = MySimpleCoderRing.get_code(@ring, bump: true)
+
+    assert byte_size(c1) == 1
+    assert byte_size(c2) == 1
+    assert byte_size(c3) == 2
   end
 
   test "MyCoderRingProc with caller_extra" do
@@ -33,6 +44,19 @@ defmodule CoderRingTest do
            )
 
     assert String.length(fun.(nil)) == 4
+  end
+
+  describe "Explitive filter" do
+    @ring_str "widget"
+
+    test "record count" do
+      assert 1_048_557 == Repo.aggregate(from(Code, where: [name: @ring_str]), :count)
+    end
+
+    test "Skipped codes" do
+      assert nil == Repo.one(from Code, where: [name: @ring_str, value: "FUCK"])
+      assert nil == Repo.one(from Code, where: [name: @ring_str, value: "SHIT"])
+    end
   end
 
   test "new with atom" do

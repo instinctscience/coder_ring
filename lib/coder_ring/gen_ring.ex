@@ -32,7 +32,7 @@ defmodule CoderRing.GenRing do
       [
         ...
       ] ++
-        MyApp.CoderRing.ring_child_specs()
+        MyApp.CoderRing.child_specs()
 
     opts = [...]
     {:ok, pid} = Supervisor.start_link(children, opts)
@@ -53,6 +53,12 @@ defmodule CoderRing.GenRing do
           restart: :transient,
           start: {__MODULE__, :start_link, [name]}
         }
+      end
+
+      @doc "Get a list of child specs for all configured rings."
+      @spec child_specs :: [Supervisor.child_spec()]
+      def child_specs do
+        Enum.map(rings(), &child_spec(&1.name))
       end
 
       @doc """

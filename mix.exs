@@ -20,7 +20,7 @@ defmodule CoderRing.MixProject do
       ],
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"},
-        plt_add_apps: [:mix, :ex_unit],
+        plt_add_apps: [:mix, :ex_unit, :expletive],
         ignore: ".dialyzer_ignore.exs"
       ],
 
@@ -50,9 +50,9 @@ defmodule CoderRing.MixProject do
     [
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      # {:ecto, "~> 2.2 or ~> 3.0"},
       {:ecto_sql, "~> 3.4"},
       {:excoveralls, "~> 0.13.3", only: :test},
+      {:expletive, "~> 0.1.0", optional: true},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},
       {:postgrex, "~> 0.15", only: [:test]}

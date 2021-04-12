@@ -11,8 +11,8 @@ defmodule CoderRing.Migration do
   def change do
     create table(:code_memos, primary_key: false) do
       add(:name, :string, primary_key: true)
-      add(:extra_num, :integer, null: false, default: 0)
-      add(:caller_extra, :string, null: false, default: "")
+      add(:uniquizer_num, :integer, null: false, default: 0)
+      add(:extra, :string, null: false, default: "")
       add(:last_max_pos, :integer)
     end
 
