@@ -139,7 +139,7 @@ defmodule CoderRing do
         {r.value, max.position, uniquizer_num}
       end)
 
-    uniquizer = if uniquizer_num == 0, do: "", else: integer_to_string(uniquizer_num)
+    uniquizer = if uniquizer_num == 0, do: "", else: integer_to_string(uniquizer_num - 1)
 
     code = "#{extra}#{uniquizer}#{base}"
 
@@ -168,8 +168,8 @@ defmodule CoderRing do
     int
     |> Integer.to_string(32)
     |> String.replace(~w(0 1 I O), fn
-      "0" -> "W"
-      "1" -> "X"
+      "0" -> "X"
+      "1" -> "W"
       "I" -> "Y"
       "O" -> "Z"
     end)
