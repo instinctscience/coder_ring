@@ -194,9 +194,10 @@ defmodule CoderRing do
   end
 
   @doc "Load the ring into the database if it isn't already there."
-  @spec populate_if_empty(t) :: t
-  def populate_if_empty(%{memo: nil} = ring), do: populate(ring)
-  def populate_if_empty(ring), do: ring
+  @spec populate_if_empty(t, keyword) :: t
+  def populate_if_empty(ring, opts \\ [])
+  def populate_if_empty(%{memo: nil} = ring, opts), do: populate(ring, opts)
+  def populate_if_empty(ring, _), do: ring
 
   @doc "Get the memo from db for the given ring `name`."
   @spec get_memo(t) :: Memo.t() | nil
@@ -209,8 +210,8 @@ defmodule CoderRing do
   def load_memo(ring), do: %{ring | memo: get_memo(ring)}
 
   @doc "Load the ring into the database."
-  @spec populate(t) :: t
-  def populate(%{blacklist: bl, name: name, repo: repo} = ring) do
+  @spec populate(t, keyword) :: t
+  def populate(%{blacklist: bl, name: name, repo: repo} = ring, opts \\ []) do
     expletive_config = bl && Expletive.configure(blacklist: apply(Expletive.Blacklist, bl, []))
 
     # Comile code record data for speedy, single-query insert.
@@ -225,10 +226,10 @@ defmodule CoderRing do
       repo.transaction(fn ->
         Logger.warn("Coder ring (#{name}) loading #{next_pos - 1} codes...")
 
-        memo = repo.insert!(Memo.new(name: to_string(name)))
+        memo = repo.insert!(Memo.new(name: to_string(name)), opts)
 
         str = Enum.join(values, ",")
-        repo.query!("INSERT INTO codes (name, position, value) VALUES #{str}")
+        repo.query!("INSERT INTO codes (name, position, value) VALUES #{str}", opts)
 
         Logger.warn("Coder ring (#{name}) is ready.")
 
@@ -239,9 +240,9 @@ defmodule CoderRing do
   end
 
   @doc "For each ring, seed its data if it hasn't already been done."
-  @spec populate_rings_if_empty :: :ok
-  def populate_rings_if_empty do
-    Enum.each(rings(), &populate_if_empty/1)
+  @spec populate_rings_if_empty(keyword) :: :ok
+  def populate_rings_if_empty(opts \\ []) do
+    Enum.each(rings(), &populate_if_empty(&1, opts))
   end
 
   # Build the full list of all possible codes.
