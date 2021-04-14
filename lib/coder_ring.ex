@@ -229,7 +229,7 @@ defmodule CoderRing do
         memo = repo.insert!(Memo.new(name: to_string(name)), opts)
 
         str = Enum.join(values, ",")
-        repo.query!("INSERT INTO codes (name, position, value) VALUES #{str}", opts)
+        repo.query!("INSERT INTO codes (name, position, value) VALUES #{str}", [], opts)
 
         Logger.warn("Coder ring (#{name}) is ready.")
 
