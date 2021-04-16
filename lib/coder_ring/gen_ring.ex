@@ -2,8 +2,8 @@ defmodule CoderRing.GenRing do
   @moduledoc """
   GenServer wrapper for a CoderRing.
 
-  Keeping memo state in memory with a process means database reads can be
-  skipped. State is, however, always synced to the database so it can be
+  Keeping memo state in memory with a process means some database reads can
+  be skipped. State is, however, always synced to the database so it can be
   restored properly on app restart.
 
   Take care to only have one GenRing proc running for a ring at any given
@@ -50,7 +50,6 @@ defmodule CoderRing.GenRing do
       def child_spec(name) do
         %{
           id: __MODULE__,
-          restart: :transient,
           start: {__MODULE__, :start_link, [name]}
         }
       end

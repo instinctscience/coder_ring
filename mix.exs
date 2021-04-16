@@ -10,6 +10,8 @@ defmodule CoderRing.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       aliases: aliases(),
       deps: deps(),
+      description: description(),
+      package: package(),
       test_coverage: [tool: ExCoveralls],
       preferred_cli_env: [
         ci: :test,
@@ -30,7 +32,7 @@ defmodule CoderRing.MixProject do
       homepage_url: "https://github.com/instinctscience/coder_ring",
       docs: [
         main: "CoderRing",
-        extras: ["README.md"]
+        extras: ["README.md", "docs/global-registry-method.md"]
       ]
     ]
   end
@@ -69,6 +71,19 @@ defmodule CoderRing.MixProject do
       ],
       "ecto.setup": ["ecto.create", "ecto.migrate"],
       "ecto.reset": ["ecto.drop", "ecto.setup"]
+    ]
+  end
+
+  defp description do
+    "Generate short, unique codes on demand."
+  end
+
+  defp package do
+    [
+      files: ~w(lib priv .formatter.exs mix.exs README* LICENSE*
+                CHANGELOG* changelog*),
+      licenses: ["MIT"],
+      links: %{"GitHub" => "https://github.com/instinctscience/coder_ring"}
     ]
   end
 end

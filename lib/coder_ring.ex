@@ -118,7 +118,7 @@ defmodule CoderRing do
         reset_memo_change(memo)
       else
         if bump do
-          Logger.warn("CoderRing: Bumping uniquizer")
+          Logger.warn("CoderRing #{name}: Bumping uniquizer.")
           reset_memo_change(memo, memo.uniquizer_num + 1)
         else
           Memo.changeset(memo, %{})
@@ -224,14 +224,14 @@ defmodule CoderRing do
 
     {:ok, memo} =
       repo.transaction(fn ->
-        Logger.warn("Coder ring (#{name}) loading #{next_pos - 1} codes...")
+        Logger.info("CoderRing #{name}: Loading #{next_pos - 1} codes...")
 
         memo = repo.insert!(Memo.new(name: to_string(name)), opts)
 
         str = Enum.join(values, ",")
         repo.query!("INSERT INTO codes (name, position, value) VALUES #{str}", [], opts)
 
-        Logger.warn("Coder ring (#{name}) is ready.")
+        Logger.info("CoderRing #{name}: Ready")
 
         memo
       end)

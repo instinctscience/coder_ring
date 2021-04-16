@@ -34,9 +34,9 @@ together:
    case is the year as 2 digits. For most use cases, this piece can be ignored.
 2. A "uniquizer" string managed by CoderRing. If the number of codes
    generated in the seed is not exhausted, this will be an empty string. When
-   the ring wraps around, a character or so may be used here. Also, if
-   `get_code/2` is called with the `bump: true`, then this will be incremented
-   and the ring cycle reset.
+   the ring wraps around, the uniquizer will be incremented. Also, if
+   `get_code/2` is called with the `bump: true`, then this will be
+   incremented and the ring cycle reset.
 3. The base code, coming directly from the seed data in the database.
 
 ## Setup
@@ -78,13 +78,8 @@ your existing `seeds.exs` or other application code:
 CoderRing.populate_rings_if_empty()
 ```
 
-Finally, create a module like this in your application:
-
-```elixir
-defmodule MyApp.CoderRing do
-  use CoderRing
-end
-```
+Finally, create a CoderRing module in your application. The section below
+explains the options.
 
 Now you can use `MyApp.CoderRing.get_code/2` to generate new codes.
 
@@ -99,17 +94,68 @@ iex> MyApp.CoderRing.get_code(:widget)
 "Q5QA"
 ```
 
-Bonus feature: If for some reason a code is returned which turns out not to
-be unique, it probably has to do with a previously-used "extra" string being
-used after switching to a different one in between. In this case, you may
-pass the `bump: true` option into `get_code/2` to have the CoderRing begin
-using (or incrementing) the uniquizer. In this case, the ring cycle is also
-reset, and we should have another full cycle without conflicts.
+## Creating a CoderRing Module for your Application
+
+You'll want to create a module in your Application to expose the CoderRing
+functionality. Here are your options.
+
+### Stateless
+
+This one is simplest, but it will require fetching current state from the database each time.
+
+```elixir
+defmodule MyApp.CoderRing do
+  use CoderRing
+end
+```
+
+### GenServer-based
+
+You've chosen the BEAM for it's state-keeping prowess. In this option, a
+long-running GenServer is spawned which will hold the current state, avoiding
+the need to fetch state each time `get_code/2` is called. Look out, however,
+if you're running with multiple servers as things will not work correctly if
+each node is running its own GenServer.
+
+See `CoderRing.GenRing` for details on setting up this method.
+
+### Using a Global Process Registry
+
+If your app is running on multiple nodes with Erlang clustering enabled,
+another option is to spawn a GenServer under a global process registry, named
+by the ring name, so that only one such process is allowed to run across the
+cluster.
+
+For more details on this method, see
+[Global Registry Method](docs/global-registry-method.md).
+
+## Dealing with an Unexpected Duplicate Code
+
+If for some reason a code is returned which turns out not to be unique, it
+probably has to do with a previously-used "extra" string being used after
+switching to a different one in between. In this case, you may pass the
+`bump: true` option into `get_code/2` to have the CoderRing begin using (or
+incrementing) the uniquizer. In this case, the ring cycle is also reset, and
+we should have another full cycle without conflicts.
+
+## Dealing with Timeouts
+
+While I didn't have trouble loading my local Postgres in development with 1
+million+ code records during initial population, I did find that when doing
+so on a deployment with the database over the network etc, that I hit Ecto's
+default 15-second timeout.
+
+To solve this, you might need to increase the timeout. Try:
+
+```elixir
+CoderRing.populate_rings_if_empty(timeout: :timer.minutes(2))
+```
 
 ## Filtering Bad Words
 
 If you wish to ensure that the generated codes do not include any profane
-words, also include the following dependency in your application:
+words, also include [`expletive`](https://github.com/xavier/expletive) as a
+dependency in your application:
 
 ```elixir
 {:expletive, "~> 0.1.0"},
