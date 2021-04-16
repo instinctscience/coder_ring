@@ -5,6 +5,12 @@ defmodule CoderRingTest do
 
   @ring :doodad
 
+  setup_all do
+    # Seed ring data.
+    IO.inspect(label: "seedingyo")
+    MySimpleCoderRing.populate_rings_if_empty()
+  end
+
   test "basic + reset + ring wrap" do
     assert :ok = MySimpleCoderRing.reset(@ring)
 
@@ -54,12 +60,8 @@ defmodule CoderRingTest do
     end
 
     test "Skipped codes" do
-      assert nil == Repo.one(from Code, where: [name: @ring_str, value: "FUCK"])
       assert nil == Repo.one(from Code, where: [name: @ring_str, value: "SHIT"])
+      assert %{value: "YA42"} = Repo.one(from Code, where: [name: @ring_str, value: "YA42"])
     end
-  end
-
-  test "new with atom" do
-    %CoderRing{name: :ha} = CoderRing.new(:ha)
   end
 end

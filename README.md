@@ -46,7 +46,7 @@ Include CoderRing as a dependency in your application:
 ```elixir
 defp deps do
   [
-    {:coder_ring, "~> 0.1.0"}
+    {:coder_ring, "~> 0.2.0"}
   ]
 end
 ```
@@ -54,7 +54,9 @@ end
 Configure code rings in your `config.exs` with something like:
 
 ```elixir
-config :coder_ring, rings: [:widget, doodad: [base_length: 2]]
+config :my_app, MyApp.CoderRing,
+  repo: MyApp.Repo,
+  rings: [:widget, doodad: [base_length: 2]]
 ```
 
 Here, we configured two code rings. Note that the `:rings` list may have
@@ -74,7 +76,7 @@ Make sure the database tables are seeded somewhere before use, whether in
 your existing `seeds.exs` or other application code:
 
 ```elixir
-CoderRing.populate_rings_if_empty()
+MyApp.CoderRing.populate_rings_if_empty()
 ```
 
 Finally, create a CoderRing module in your application. The section below
@@ -104,7 +106,7 @@ This one is simplest, but it will require fetching current state from the databa
 
 ```elixir
 defmodule MyApp.CoderRing do
-  use CoderRing
+  use CoderRing, otp_app: :my_app
 end
 ```
 
@@ -147,7 +149,7 @@ default 15-second timeout.
 To solve this, you might need to increase the timeout. Try:
 
 ```elixir
-CoderRing.populate_rings_if_empty(timeout: :timer.minutes(2))
+MyApp.CoderRing.populate_rings_if_empty(timeout: :timer.minutes(2))
 ```
 
 ## Filtering Bad Words
@@ -157,13 +159,17 @@ words, also include [`expletive`](https://github.com/xavier/expletive) as a
 dependency in your application:
 
 ```elixir
-{:expletive, "~> 0.1.0"},
+def deps do
+  {:expletive, "~> 0.1.0"}
+end
 ```
 
 And then add the `:expletive_blacklist` option in the pertinent ring config:
 
 ```elixir
-config :coder_ring, rings: [widget: [expletive_blacklist: :english]]
+config :my_app, MyApp.CoderRing,
+  repo: MyApp.Repo,
+  rings: [widget: [expletive_blacklist: :english]]
 ```
 
 ## Acknowledgements

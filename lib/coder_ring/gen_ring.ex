@@ -20,7 +20,7 @@ defmodule CoderRing.GenRing do
 
   ```elixir
   defmodule MyApp.CoderRing do
-    use CoderRing.GenRing
+    use CoderRing.GenRing, otp_app: :my_app
   end
   ```
 
@@ -40,9 +40,9 @@ defmodule CoderRing.GenRing do
   ```
   """
 
-  defmacro __using__(_) do
+  defmacro __using__(otp_app: otp_app) do
     quote do
-      use CoderRing
+      use CoderRing, otp_app: unquote(otp_app), module: __MODULE__
       use GenServer
 
       @doc false

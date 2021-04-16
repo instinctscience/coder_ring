@@ -15,6 +15,3 @@ Mix.Task.run("ecto.create", ~w(--quiet))
 Mix.Task.run("ecto.migrate", ~w(--quiet))
 
 {:ok, _pid} = CoderRing.Test.Repo.start_link()
-
-# Seed ring data.
-CoderRing.populate_rings_if_empty()

@@ -32,18 +32,36 @@ defmodule CoderRing do
           repo: module
         }
 
-  defmacro __using__(_) do
+  defmacro __using__(opts) do
+    otp_app = opts[:otp_app] || raise ":otp_app option is required."
+    module = opts[:module]
+
+    # quote bind_quoted: [module: opts[:module], otp_app: otp_app] do
     quote do
       import unquote(__MODULE__)
       @behaviour unquote(__MODULE__)
+      @module unquote(module) || __MODULE__
 
-      @impl unquote(__MODULE__)
+      @doc """
+      List all configured rings.
+
+      Memos will not be loaded. Use `CoderRing.load_memo/1` to fetch state
+      from the database.
+      """
+      @spec rings :: [CoderRing.t()]
+      def rings, do: CoderRing.rings(unquote(otp_app), @module)
+
+      @doc "Get a ring by its name."
+      @spec ring(atom) :: CoderRing.t() | nil
+      def ring(name), do: CoderRing.ring(unquote(otp_app), @module, name)
+
+      # @impl unquote(__MODULE__)
       def call(name, message) do
         # Lame logic where memo is fetched & dropped every time.
         # Deserves to be overridden.
         {reply, _state} =
           name
-          |> CoderRing.ring()
+          |> ring()
           |> CoderRing.load_memo()
           |> CoderRing.invoke(message)
 
@@ -67,6 +85,16 @@ defmodule CoderRing do
       @spec reset(atom) :: :ok
       def reset(name), do: call(name, :reset)
 
+      @doc """
+      For each ring, seed its data if it hasn't already been done.
+
+      See `CoderRing.populate/2`.
+      """
+      @spec populate_rings_if_empty(keyword) :: :ok
+      def populate_rings_if_empty(opts \\ []) do
+        Enum.each(rings(), &CoderRing.populate_if_empty(&1, opts))
+      end
+
       defoverridable call: 2
     end
   end
@@ -78,21 +106,18 @@ defmodule CoderRing do
 
   * `:name` - Ring name atom. Required.
   * `:base_length` - Number of characters for the base code, 1-4. Default: 4
-  * `:repo` - `Ecto.Repo` module to use. Default: application env config.
+  * `:repo` - `Ecto.Repo` module to use. Required.
   * `:expletive_blacklist` - `Expletive` blacklist to use: `:english`,
     `:international` or `nil`. Note that, if enabled, the `expletive` package
     must be added as a dependency in your application. Default: `nil`
   """
-  @spec new(atom | keyword | {atom, keyword}) :: t
-  def new(name) when is_atom(name), do: new(name: name)
-  def new({name, opts}), do: opts |> Keyword.put(:name, name) |> new()
-
+  @spec new(keyword) :: t
   def new(opts) do
     name = opts[:name] || raise ":name option is required."
     is_atom(name) || raise ":name must be an atom."
     base_length = opts[:base_length] || @default_base_length
     base_length in 1..4 || raise "Only :base_length 1 and 4 are supported."
-    repo = opts[:repo] || Application.get_env(:coder_ring, :repo)
+    repo = opts[:repo] || raise ":repo must be an Ecto.Repo module."
     bl = opts[:expletive_blacklist]
     bl in [nil, :english, :international] || raise "Invalid expletive_blacklist: #{inspect(bl)}"
 
@@ -105,13 +130,28 @@ defmodule CoderRing do
     }
   end
 
-  @doc "List all configured rings. (Memos will be unloaded, nil.)"
-  @spec rings :: [t]
-  def rings, do: Enum.map(Application.get_env(:coder_ring, :rings), &new/1)
+  @doc """
+  List all configured rings.
 
-  @doc "Get a ring by its name."
-  @spec ring(atom) :: t | nil
-  def ring(name), do: Enum.find(rings(), &(&1.name == name))
+  Memos will be unloaded. Use `CoderRing.load_memo/1` to fetch state from the
+  database.
+  """
+  @spec rings(atom, module) :: [t]
+  def rings(otp_app, mod) do
+    config = Application.get_env(otp_app, mod) || []
+
+    Enum.map(config[:rings] || [], fn {name, opts} ->
+      [name: name, repo: config[:repo]]
+      |> Keyword.merge(opts)
+      |> new()
+    end)
+  end
+
+  @doc "Get a ring for `module` under `otp_app` by its `name`."
+  @spec ring(atom, module, atom) :: t | nil
+  def ring(otp_app, mod, name) do
+    Enum.find(rings(otp_app, mod), &(&1.name == name))
+  end
 
   @doc "Invoke the functionality identified by `message`. Memo should be loaded."
   @spec invoke(t, message :: any) :: {reply :: any, t}
@@ -246,7 +286,7 @@ defmodule CoderRing do
         str = Enum.join(values, ",")
         repo.query!("INSERT INTO codes (name, position, value) VALUES #{str}", [], opts)
 
-        Logger.info("CoderRing #{name}: Ready")
+        Logger.info("CoderRing #{name}: Ready.")
 
         memo
       end)
@@ -259,9 +299,9 @@ defmodule CoderRing do
 
   See `populate/2`.
   """
-  @spec populate_rings_if_empty(keyword) :: :ok
-  def populate_rings_if_empty(opts \\ []) do
-    Enum.each(rings(), &populate_if_empty(&1, opts))
+  @spec populate_rings_if_empty([t], keyword) :: :ok
+  def populate_rings_if_empty(rings, opts \\ []) do
+    Enum.each(rings, &populate_if_empty(&1, opts))
   end
 
   # Build the full list of all possible codes.

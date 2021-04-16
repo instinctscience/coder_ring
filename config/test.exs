@@ -1,8 +1,13 @@
 use Mix.Config
 
 config :coder_ring,
-  ecto_repos: [CoderRing.Test.Repo],
-  expletive_blacklist: :english,
+  ecto_repos: [CoderRing.Test.Repo]
+
+config :coder_ring, CoderRing.MySimpleCoderRing,
+  repo: CoderRing.Test.Repo,
+  rings: [widget: [expletive_blacklist: :english], doodad: [base_length: 1]]
+
+config :coder_ring, CoderRing.MyCoderRingProc,
   repo: CoderRing.Test.Repo,
   rings: [widget: [expletive_blacklist: :english], doodad: [base_length: 1]]
 
