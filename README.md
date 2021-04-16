@@ -46,9 +46,7 @@ Include CoderRing as a dependency in your application:
 ```elixir
 defp deps do
   [
-    {:coder_ring,
-      git: "git@github.com:instinctscience/coder_ring.git",
-      branch: "main"},
+    {:coder_ring, "~> 0.1.0"}
   ]
 end
 ```
@@ -61,7 +59,8 @@ config :coder_ring, rings: [:widget, doodad: [base_length: 2]]
 
 Here, we configured two code rings. Note that the `:rings` list may have
 atoms for default options or keyword list-style entries (`{:doodad,
-base_length: 2}`) if options are specified.
+base_length: 2}`) if options are specified. See `CoderRing.new/1` for
+available options.
 
 Next, add the following to `change/0` in a new or existing Ecto migration:
 
@@ -142,7 +141,7 @@ we should have another full cycle without conflicts.
 
 While I didn't have trouble loading my local Postgres in development with 1
 million+ code records during initial population, I did find that when doing
-so on a deployment with the database over the network etc, that I hit Ecto's
+so on a deployment with the database over the network etc, I hit Ecto's
 default 15-second timeout.
 
 To solve this, you might need to increase the timeout. Try:

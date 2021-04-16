@@ -3,7 +3,7 @@
 If your application is running on multiple nodes with Erlang clustering
 enabled, you might want the GenServer for a given ring to be running once
 across the cluster. (Having multiple simultaneous GenServers for the same
-ring will be a bad time.) This document explains one way to accomplish this.
+ring will be a bad time.) Here, we'll explain one way to accomplish this.
 
 I recommend the excellent [Horde](https://github.com/derekkraan/horde)
 library for this purpose. Follow its documentation to include it as a

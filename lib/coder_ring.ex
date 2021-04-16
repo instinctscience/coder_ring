@@ -71,7 +71,18 @@ defmodule CoderRing do
     end
   end
 
-  @doc "Make a new ring struct."
+  @doc """
+  Make a new ring struct.
+
+  ## Options
+
+  * `:name` - Ring name atom. Required.
+  * `:base_length` - Number of characters for the base code, 1-4. Default: 4
+  * `:repo` - `Ecto.Repo` module to use. Default: application env config.
+  * `:expletive_blacklist` - `Expletive` blacklist to use: `:english`,
+    `:international` or `nil`. Note that, if enabled, the `expletive` package
+    must be added as a dependency in your application. Default: `nil`
+  """
   @spec new(atom | keyword | {atom, keyword}) :: t
   def new(name) when is_atom(name), do: new(name: name)
   def new({name, opts}), do: opts |> Keyword.put(:name, name) |> new()
@@ -209,7 +220,11 @@ defmodule CoderRing do
   @spec load_memo(t) :: t
   def load_memo(ring), do: %{ring | memo: get_memo(ring)}
 
-  @doc "Load the ring into the database."
+  @doc """
+  Load the `ring` into the database.
+
+  All `opts` are passed along to `Ecto.Repo` calls to query and insert.
+  """
   @spec populate(t, keyword) :: t
   def populate(%{blacklist: bl, name: name, repo: repo} = ring, opts \\ []) do
     expletive_config = bl && Expletive.configure(blacklist: apply(Expletive.Blacklist, bl, []))
@@ -239,7 +254,11 @@ defmodule CoderRing do
     %{ring | memo: memo}
   end
 
-  @doc "For each ring, seed its data if it hasn't already been done."
+  @doc """
+  For each ring, seed its data if it hasn't already been done.
+
+  See `populate/2`.
+  """
   @spec populate_rings_if_empty(keyword) :: :ok
   def populate_rings_if_empty(opts \\ []) do
     Enum.each(rings(), &populate_if_empty(&1, opts))

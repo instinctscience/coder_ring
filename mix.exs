@@ -4,7 +4,7 @@ defmodule CoderRing.MixProject do
   def project do
     [
       app: :coder_ring,
-      version: "0.1.0",
+      version: "0.1.1",
       elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -75,7 +75,7 @@ defmodule CoderRing.MixProject do
   end
 
   defp description do
-    "Generate short, unique codes on demand."
+    "Generate short, unique, random-looking codes on demand."
   end
 
   defp package do
