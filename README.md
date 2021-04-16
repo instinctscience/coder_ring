@@ -176,4 +176,5 @@ config :my_app, MyApp.CoderRing,
 
 The methodology is appreciatively derived from Robert Gamble's accepted
 answer on [this Stack Overflow
-page](https://stackoverflow.com/questions/196017/unique-non-repeating-random-numbers-in-o1/16097246#16097246).
+page](https://stackoverflow.com/questions/196017/unique-non-repeating-random-numbers-in-o1/16097246#196065).
+
