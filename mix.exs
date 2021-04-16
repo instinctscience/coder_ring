@@ -80,8 +80,8 @@ defmodule CoderRing.MixProject do
 
   defp package do
     [
-      files: ~w(lib priv .formatter.exs mix.exs README* LICENSE*
-                CHANGELOG* changelog*),
+      files: ~w(lib priv .formatter.exs mix.exs README.md LICENSE
+        CHANGELOG.md),
       licenses: ["MIT"],
       links: %{"GitHub" => "https://github.com/instinctscience/coder_ring"}
     ]
