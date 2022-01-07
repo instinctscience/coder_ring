@@ -4,7 +4,7 @@ defmodule CoderRing.MixProject do
   def project do
     [
       app: :coder_ring,
-      version: "0.2.0",
+      version: "0.2.1",
       elixir: "~> 1.11",
       start_permanent: Mix.env() == :prod,
       elixirc_paths: elixirc_paths(Mix.env()),
@@ -53,7 +53,7 @@ defmodule CoderRing.MixProject do
       {:credo, "~> 1.5", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:ecto_sql, "~> 3.4"},
-      {:excoveralls, "~> 0.13.3", only: :test},
+      {:excoveralls, "~> 0.14.4", only: :test},
       {:expletive, "~> 0.1.0", optional: true},
       {:ex_doc, "~> 0.23", only: :dev, runtime: false},
       {:mix_test_watch, "~> 1.0", only: :dev, runtime: false},

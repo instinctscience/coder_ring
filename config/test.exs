@@ -1,4 +1,4 @@
-use Mix.Config
+import Config
 
 config :coder_ring,
   ecto_repos: [CoderRing.Test.Repo]

@@ -166,11 +166,11 @@ defmodule CoderRing do
     memo_cs =
       if extra != memo.extra do
         # Caller has new extra string. Start ring over so we have a fresh set.
-        reset_memo_change(memo)
+        reset_memo_change(ring)
       else
         if bump do
           Logger.warn("CoderRing #{name}: Bumping uniquizer.")
-          reset_memo_change(memo, memo.uniquizer_num + 1)
+          reset_memo_change(ring, memo.uniquizer_num + 1)
         else
           Memo.changeset(memo, %{})
         end
@@ -202,12 +202,12 @@ defmodule CoderRing do
 
   # Get the next code to be used as "max" and a possibly updated uniquizer_num.
   @spec get_max(t) :: {Code.t(), non_neg_integer}
-  defp get_max(%{memo: %{uniquizer_num: un, last_max_pos: last_max_pos}, name: name} = ring) do
+  def get_max(%{memo: %{uniquizer_num: un, last_max_pos: last_max_pos}, name: name} = ring) do
     {max_pos, un} =
-      cond do
-        last_max_pos == nil -> {code_count(ring), un}
-        last_max_pos == 1 -> {code_count(ring), un + 1}
-        true -> {last_max_pos - 1, un}
+      case last_max_pos do
+        nil -> {code_count(ring), un}
+        1 -> {code_count(ring), un + 1}
+        _ -> {last_max_pos - 1, un}
       end
 
     {ring.repo.one!(from Code, where: [name: ^to_string(name), position: ^max_pos]), un}
@@ -234,14 +234,15 @@ defmodule CoderRing do
 
   # Reset the ring cycle.
   @spec do_reset(t) :: t
-  defp do_reset(%{memo: memo, repo: repo} = ring) do
-    %{ring | memo: memo |> reset_memo_change() |> repo.update!()}
+  defp do_reset(%{repo: repo} = ring) do
+    %{ring | memo: ring |> reset_memo_change() |> repo.update!()}
   end
 
   # Create a changeset on `memo`, resetting the ring cycle.
-  @spec reset_memo_change(Memo.t()) :: Changeset.t()
-  defp reset_memo_change(memo, uniquizer_num \\ 0) do
-    Memo.changeset(memo, %{uniquizer_num: uniquizer_num, last_max_pos: nil})
+  @spec reset_memo_change(t) :: Changeset.t()
+  defp reset_memo_change(%{repo: repo, memo: %{name: name} = memo}, uniquizer_num \\ 0) do
+    lmp = repo.aggregate(from(Code, where: [name: ^name]), :count)
+    Memo.changeset(memo, %{uniquizer_num: uniquizer_num, last_max_pos: lmp + 1})
   end
 
   @doc "Load the ring into the database if it isn't already there."
@@ -269,7 +270,7 @@ defmodule CoderRing do
   def populate(%{blacklist: bl, name: name, repo: repo} = ring, opts \\ []) do
     expletive_config = bl && Expletive.configure(blacklist: apply(Expletive.Blacklist, bl, []))
 
-    # Comile code record data for speedy, single-query insert.
+    # Compile code record data for speedy, single-query insert.
     {values, next_pos} =
       Enum.reduce(all_codes(ring), {[], 1}, fn val, {acc_list, acc_pos} ->
         if expletive_config && Expletive.profane?(val, expletive_config),
@@ -281,7 +282,10 @@ defmodule CoderRing do
       repo.transaction(fn ->
         Logger.info("CoderRing #{name}: Loading #{next_pos - 1} codes...")
 
-        memo = repo.insert!(Memo.new(name: to_string(name)), opts)
+        memo =
+          [name: to_string(name), last_max_pos: next_pos]
+          |> Memo.new()
+          |> repo.insert!(opts)
 
         str = Enum.join(values, ",")
         repo.query!("INSERT INTO codes (name, position, value) VALUES #{str}", [], opts)

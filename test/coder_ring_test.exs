@@ -7,7 +7,6 @@ defmodule CoderRingTest do
 
   setup_all do
     # Seed ring data.
-    IO.inspect(label: "seedingyo")
     MySimpleCoderRing.populate_rings_if_empty()
   end
 
