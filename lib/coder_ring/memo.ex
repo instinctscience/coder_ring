@@ -11,7 +11,7 @@ defmodule CoderRing.Memo do
   schema "code_memos" do
     field :extra, :string, default: ""
     field :uniquizer_num, :integer, default: 0
-    field :last_max_pos, :integer
+    field :last_max_pos, :integer, default: 0
   end
 
   @typedoc """
@@ -21,13 +21,12 @@ defmodule CoderRing.Memo do
   * `:uniquizer_num` - A number to be passed to `integer_to_string/1` for an
     extra value to be used between `:caller_extra` and the base code.
   * `:last_max_pos` - Position of the code record last used as "max".
-    Value is `nil` before the first iteration is made.
   """
   @type t :: %Memo{
           name: String.t(),
           extra: String.t(),
           uniquizer_num: non_neg_integer,
-          last_max_pos: non_neg_integer | nil
+          last_max_pos: non_neg_integer
         }
 
   @doc "Create a new Memo struct."

@@ -152,6 +152,9 @@ To solve this, you might need to increase the timeout. Try:
 MyApp.CoderRing.populate_rings_if_empty(timeout: :timer.minutes(2))
 ```
 
+Increasing the `:timeout` and `:ownership_timeout` Repo configurations may also
+be needed.
+
 ## Filtering Bad Words
 
 If you wish to ensure that the generated codes do not include any profane

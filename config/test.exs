@@ -15,6 +15,7 @@ config :coder_ring, CoderRing.Test.Repo,
   database: "coder_ring_test",
   pool: Ecto.Adapters.SQL.Sandbox,
   priv: "test/support/priv",
-  timeout: 20_000
+  timeout: :timer.minutes(15),
+  ownership_timeout: :timer.minutes(15)
 
 config :logger, level: :warn
