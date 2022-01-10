@@ -13,7 +13,10 @@ defmodule CoderRingTest do
   test "basic + reset + ring wrap" do
     assert :ok = MySimpleCoderRing.reset(@ring)
 
-    round1 = Enum.map(1..32, fn _ -> MySimpleCoderRing.get_code(@ring) end)
+    round1 =
+      Enum.map(1..32, fn _ ->
+        MySimpleCoderRing.get_code(@ring)
+      end)
 
     assert length(round1) == length(Enum.uniq(round1))
 

@@ -8,7 +8,11 @@ defmodule CoderRing do
   # 32 (readable) chars for codes: 2-9, A-Z (minus I and O)
   @chars ~w(V S E 2 9 3 A H 7 Q 6 R 4 B T 5 C L X G J Z F P D W U K Y M 8 N)
 
+  # Default length of base code.
   @default_base_length 4
+
+  # How many codes to insert at a time when populating codes table.
+  @chunk_count 100_000
 
   @doc "Invoke the `name` ring with the given `message`."
   @callback call(name :: atom, message :: any) :: any
@@ -180,7 +184,7 @@ defmodule CoderRing do
       repo.transaction(fn ->
         {max, uniquizer_num} = get_max(%{ring | memo: Changeset.apply_changes(memo_cs)})
 
-        r_pos = Enum.random(1..max.position)
+        r_pos = Enum.random(0..max.position)
 
         r = repo.one!(from Code, where: [name: ^to_string(name), position: ^r_pos])
 
@@ -205,8 +209,7 @@ defmodule CoderRing do
   def get_max(%{memo: %{uniquizer_num: un, last_max_pos: last_max_pos}, name: name} = ring) do
     {max_pos, un} =
       case last_max_pos do
-        nil -> {code_count(ring), un}
-        1 -> {code_count(ring), un + 1}
+        0 -> {code_count(ring) - 1, un + 1}
         _ -> {last_max_pos - 1, un}
       end
 
@@ -226,10 +229,17 @@ defmodule CoderRing do
     end)
   end
 
-  # Get the total number of codes in the ring.
-  @spec code_count(t) :: non_neg_integer
-  defp code_count(%{base_length: base_len}) do
+  # Get the approximate total number of codes in the ring.
+  # (Some may be filtered for profanity.)
+  @spec appx_code_count(t) :: non_neg_integer
+  defp appx_code_count(%{base_length: base_len}) do
     round(:math.pow(length(@chars), base_len))
+  end
+
+  # Get the exact number of codes in the codes table by name.
+  @spec code_count(t) :: non_neg_integer
+  defp code_count(%{name: name, repo: repo}) do
+    repo.aggregate(from(Code, where: [name: ^to_string(name)]), :count)
   end
 
   # Reset the ring cycle.
@@ -240,9 +250,9 @@ defmodule CoderRing do
 
   # Create a changeset on `memo`, resetting the ring cycle.
   @spec reset_memo_change(t) :: Changeset.t()
-  defp reset_memo_change(%{repo: repo, memo: %{name: name} = memo}, uniquizer_num \\ 0) do
-    lmp = repo.aggregate(from(Code, where: [name: ^name]), :count)
-    Memo.changeset(memo, %{uniquizer_num: uniquizer_num, last_max_pos: lmp + 1})
+  defp reset_memo_change(%{memo: memo} = ring, uniquizer_num \\ 0) do
+    lmp = code_count(ring)
+    Memo.changeset(memo, %{uniquizer_num: uniquizer_num, last_max_pos: lmp})
   end
 
   @doc "Load the ring into the database if it isn't already there."
@@ -267,35 +277,50 @@ defmodule CoderRing do
   All `opts` are passed along to `Ecto.Repo` calls to query and insert.
   """
   @spec populate(t, keyword) :: t
-  def populate(%{blacklist: bl, name: name, repo: repo} = ring, opts \\ []) do
-    expletive_config = bl && Expletive.configure(blacklist: apply(Expletive.Blacklist, bl, []))
-
-    # Compile code record data for speedy, single-query insert.
-    {values, next_pos} =
-      Enum.reduce(all_codes(ring), {[], 1}, fn val, {acc_list, acc_pos} ->
-        if expletive_config && Expletive.profane?(val, expletive_config),
-          do: {acc_list, acc_pos},
-          else: {["('#{name}', #{acc_pos}, '#{val}')" | acc_list], acc_pos + 1}
-      end)
-
+  def populate(%{name: name, repo: repo} = ring, opts \\ []) do
     {:ok, memo} =
       repo.transaction(fn ->
-        Logger.info("CoderRing #{name}: Loading #{next_pos - 1} codes...")
+        Logger.info("CoderRing #{name}: Loading appx #{appx_code_count(ring)} codes...")
 
-        memo =
-          [name: to_string(name), last_max_pos: next_pos]
-          |> Memo.new()
-          |> repo.insert!(opts)
+        # Create the memo record so the code records' foreign keys link up.
+        memo = [name: to_string(name)] |> Memo.new() |> repo.insert!(opts)
 
-        str = Enum.join(values, ",")
-        repo.query!("INSERT INTO codes (name, position, value) VALUES #{str}", [], opts)
+        count = insert_chunks(ring)
 
-        Logger.info("CoderRing #{name}: Ready.")
+        # last_max_pos will never be count again. This is the last position in
+        # the database plus 1 in order to get the counting started correctly.
+        memo = memo |> Memo.changeset(%{last_max_pos: count}) |> repo.update!()
+
+        Logger.info("CoderRing #{name}: Ready with #{count} codes.")
 
         memo
       end)
 
     %{ring | memo: memo}
+  end
+
+  # Insert all possible codes in batches to conserve memory.
+  # Return the total number of code records inserted.
+  @spec insert_chunks(t, keyword) :: non_neg_integer
+  defp insert_chunks(%{blacklist: bl, name: name, repo: repo} = ring, opts \\ []) do
+    expletive_config = bl && Expletive.configure(blacklist: apply(Expletive.Blacklist, bl, []))
+
+    ring
+    |> codes_stream()
+    |> Stream.chunk_every(@chunk_count)
+    |> Enum.reduce(0, fn chunk, final_count ->
+      {values_str, chunk_count} =
+        Enum.reduce(chunk, {"", 0}, fn code, {acc, acc_count} ->
+          if expletive_config && Expletive.profane?(code, expletive_config),
+            do: {acc, acc_count},
+            else: {"('#{name}', #{acc_count}, '#{code}')," <> acc, acc_count + 1}
+        end)
+
+      str = String.trim_trailing(values_str, ",")
+      repo.query!("INSERT INTO codes (name, position, value) VALUES #{str}", [], opts)
+
+      final_count + chunk_count
+    end)
   end
 
   @doc """
@@ -308,27 +333,23 @@ defmodule CoderRing do
     Enum.each(rings, &populate_if_empty(&1, opts))
   end
 
-  # Build the full list of all possible codes.
-  @spec all_codes(t) :: [String.t()]
-  defp all_codes(%{base_length: 4}) do
-    for a <- @chars, b <- @chars, c <- @chars, d <- @chars do
-      Enum.join([a, b, c, d])
-    end
-  end
+  # Create a stream, generating the full list of all possible codes.
+  @spec codes_stream(t) :: Stream.t()
+  def codes_stream(%{base_length: base_length}) do
+    base = length(@chars)
+    last_idx = base_length - 1
 
-  defp all_codes(%{base_length: 3}) do
-    for a <- @chars, b <- @chars, c <- @chars do
-      Enum.join([a, b, c])
-    end
-  end
+    Stream.map(0..(base ** base_length - 1), fn num ->
+      {out, _} =
+        Enum.reduce(last_idx..0, {"", num}, fn char, {acc, rem} ->
+          char_val = base ** char
+          val = div(rem, char_val)
+          rem = rem - val * char_val
 
-  defp all_codes(%{base_length: 2}) do
-    for a <- @chars, b <- @chars do
-      Enum.join([a, b])
-    end
-  end
+          {acc <> Enum.at(@chars, val), rem}
+        end)
 
-  defp all_codes(%{base_length: 1}) do
-    for a <- @chars, do: a
+      out
+    end)
   end
 end
