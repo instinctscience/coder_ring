@@ -308,9 +308,9 @@ defmodule CoderRing do
     ring
     |> codes_stream()
     |> Stream.chunk_every(@chunk_count)
-    |> Enum.reduce(0, fn chunk, final_count ->
-      {values_str, chunk_count} =
-        Enum.reduce(chunk, {"", 0}, fn code, {acc, acc_count} ->
+    |> Enum.reduce(0, fn chunk, count ->
+      {values_str, count} =
+        Enum.reduce(chunk, {"", count}, fn code, {acc, acc_count} ->
           if expletive_config && Expletive.profane?(code, expletive_config),
             do: {acc, acc_count},
             else: {"('#{name}', #{acc_count}, '#{code}')," <> acc, acc_count + 1}
@@ -319,7 +319,7 @@ defmodule CoderRing do
       str = String.trim_trailing(values_str, ",")
       repo.query!("INSERT INTO codes (name, position, value) VALUES #{str}", [], opts)
 
-      final_count + chunk_count
+      count
     end)
   end
 
