@@ -278,23 +278,18 @@ defmodule CoderRing do
   """
   @spec populate(t, keyword) :: t
   def populate(%{name: name, repo: repo} = ring, opts \\ []) do
-    {:ok, memo} =
-      repo.transaction(fn ->
-        Logger.info("CoderRing #{name}: Loading appx #{appx_code_count(ring)} codes...")
+    Logger.info("CoderRing #{name}: Loading appx #{appx_code_count(ring)} codes...")
 
-        # Create the memo record so the code records' foreign keys link up.
-        memo = [name: to_string(name)] |> Memo.new() |> repo.insert!(opts)
+    # Create the memo record so the code records' foreign keys link up.
+    memo = [name: to_string(name)] |> Memo.new() |> repo.insert!(opts)
 
-        count = insert_chunks(ring)
+    count = insert_chunks(ring)
 
-        # last_max_pos will never be count again. This is the last position in
-        # the database plus 1 in order to get the counting started correctly.
-        memo = memo |> Memo.changeset(%{last_max_pos: count}) |> repo.update!()
+    # last_max_pos will never be count again. This is the last position in
+    # the database plus 1 in order to get the counting started correctly.
+    memo = memo |> Memo.changeset(%{last_max_pos: count}) |> repo.update!()
 
-        Logger.info("CoderRing #{name}: Ready with #{count} codes.")
-
-        memo
-      end)
+    Logger.info("CoderRing #{name}: Ready with #{count} codes.")
 
     %{ring | memo: memo}
   end
